@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Trston</title>
+    <link rel="stylesheet" href="options.css">
+  </head>
+  <body>
+    <main class="shell">
+      <header class="masthead">
+        <div class="brand">
+          <img src="icons/icon-48.png" alt="" width="48" height="48">
+          <div>
+            <p class="eyebrow">Trston</p>
+            <h1 data-i18n="optionsHeading">Local page translation</h1>
+          </div>
+        </div>
+        <p class="lede" data-i18n="optionsLede">Trston automatically translates sites that are not in your preferred language.</p>
+      </header>
+
+      <section class="grid" aria-label="Trston settings">
+        <form class="panel" id="settings-form">
+          <div class="section-title">
+            <h2 data-i18n="preferredLanguage">Preferred language</h2>
+            <span id="save-state" role="status" data-i18n="unsaved">Unsaved</span>
+          </div>
+
+          <label class="field">
+            <span data-i18n="targetLanguage">Translate to</span>
+            <select id="target-language" name="targetLanguage"></select>
+          </label>
+
+          <div class="split">
+            <label class="switch">
+              <input id="show-overlay" name="showOverlay" type="checkbox">
+              <span data-i18n="showOverlay">Show page status overlay</span>
+            </label>
+            <label class="switch">
+              <input id="auto-translate" name="autoTranslate" type="checkbox">
+              <span data-i18n="autoTranslate">Auto-translate non-preferred sites</span>
+            </label>
+            <label class="switch">
+              <input id="stream-translation" name="streamTranslation" type="checkbox">
+              <span data-i18n="streamTranslation">Stream near the viewport</span>
+            </label>
+            <label class="switch">
+              <input id="translate-title" name="translateTitle" type="checkbox">
+              <span data-i18n="translateTitle">Translate tab title</span>
+            </label>
+          </div>
+
+          <div class="field">
+            <span data-i18n="neverTranslateLanguages">Never auto-translate these languages</span>
+            <div class="language-add-row">
+              <select id="never-language"></select>
+              <button class="button" id="add-never-language" type="button" data-i18n="addLanguage">Add</button>
+            </div>
+            <div class="language-chips" id="never-language-list" aria-live="polite"></div>
+          </div>
+
+          <div class="field">
+            <span data-i18n="neverTranslateSites">Never auto-translate these websites</span>
+            <div class="language-add-row">
+              <input id="never-site" type="text" inputmode="url" placeholder="example.com">
+              <button class="button" id="add-never-site" type="button" data-i18n="addSite">Add</button>
+            </div>
+            <div class="language-chips" id="never-site-list" aria-live="polite"></div>
+          </div>
+
+          <label class="field">
+            <span data-i18n="streamLimit">Streaming cache limit</span>
+            <input id="max-nodes" name="maxNodes" type="number" min="80" max="5000" step="10">
+          </label>
+
+          <button class="button primary" type="submit" data-i18n="saveSettings">Save settings</button>
+        </form>
+
+        <section class="panel">
+          <div class="section-title">
+            <h2 data-i18n="localEngine">Local engine</h2>
+            <span id="engine-state" data-i18n="checking">Checking</span>
+          </div>
+
+          <dl class="status-list">
+            <div>
+              <dt data-i18n="translatorLabel">Chrome Translator</dt>
+              <dd id="translator-status">-</dd>
+            </div>
+            <div>
+              <dt data-i18n="detectorLabel">Language Detector</dt>
+              <dd id="detector-status">-</dd>
+            </div>
+            <div>
+              <dt data-i18n="languagePack">Language pack</dt>
+              <dd id="pair-status">-</dd>
+            </div>
+            <div>
+              <dt data-i18n="fallbackGlossary">Offline fallback</dt>
+              <dd id="fallback-status">-</dd>
+            </div>
+            <div>
+              <dt data-i18n="shortcutLabel">Shortcut</dt>
+              <dd data-i18n="shortcutHint">Cmd/Ctrl+J or Alt/Option+J</dd>
+            </div>
+          </dl>
+
+          <div class="download-meter" id="download-meter" hidden>
+            <span id="download-meter-bar"></span>
+          </div>
+          <div class="button-row">
+            <button class="button primary" id="prepare-pack" type="button" data-i18n="preparePack">Prepare language pack</button>
+            <button class="button" id="refresh-status" type="button" data-i18n="refresh">Refresh</button>
+          </div>
+        </section>
+      </section>
+
+      <section class="panel tester">
+        <div class="section-title">
+          <h2 data-i18n="localTest">Local test</h2>
+          <span id="test-state" data-i18n="notTested">Not tested</span>
+        </div>
+
+        <div class="test-controls">
+          <label class="field">
+            <span data-i18n="sourceLanguage">Source language</span>
+            <select id="source-language"></select>
+          </label>
+          <label class="field">
+            <span data-i18n="testTargetLanguage">Target language</span>
+            <select id="test-target-language"></select>
+          </label>
+        </div>
+
+        <div class="test-area">
+          <label class="field textarea-field">
+            <span data-i18n="sourceText">Source</span>
+            <textarea id="test-input" rows="7">Hello, thank you for using Trston.</textarea>
+          </label>
+          <label class="field textarea-field">
+            <span data-i18n="translatedText">Translation</span>
+            <textarea id="test-output" rows="7" readonly></textarea>
+          </label>
+        </div>
+
+        <button class="button primary" id="run-test" type="button" data-i18n="runLocalTest">Run local translation</button>
+      </section>
+    </main>
+
+    <script type="module" src="options.js"></script>
+  </body>
+</html>

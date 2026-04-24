@@ -1,0 +1,11 @@
+{
+  "name": "trston",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Local-first Chrome page translator with on-device AI, streaming viewport translation, and multilingual settings.",
+  "scripts": {
+    "make:icons": "node scripts/make-icons.mjs",
+    "validate": "node scripts/validate.mjs"
+  }
+}
