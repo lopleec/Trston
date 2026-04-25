@@ -25,6 +25,8 @@
   "addSite": { "message": "Agregar" },
   "removeSite": { "message": "Quitar $SITE$", "placeholders": { "site": { "content": "$1" } } },
   "noSitesSelected": { "message": "No hay sitios agregados" },
+  "sitePatternPlaceholder": { "message": "example.com o example.com/ruta" },
+  "siteBlocklistPrivacy": { "message": "Las exclusiones de sitios se guardan solo en este dispositivo." },
   "streamLimit": { "message": "Limite de cache de flujo" },
   "saveSettings": { "message": "Guardar ajustes" },
   "localEngine": { "message": "Motor local" },

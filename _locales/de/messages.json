@@ -25,6 +25,8 @@
   "addSite": { "message": "Hinzufugen" },
   "removeSite": { "message": "$SITE$ entfernen", "placeholders": { "site": { "content": "$1" } } },
   "noSitesSelected": { "message": "Keine Websites hinzugefugt" },
+  "sitePatternPlaceholder": { "message": "example.com oder example.com/pfad" },
+  "siteBlocklistPrivacy": { "message": "Website-Ausnahmen werden nur auf diesem Gerat gespeichert." },
   "streamLimit": { "message": "Streaming-Cache-Limit" },
   "saveSettings": { "message": "Einstellungen speichern" },
   "localEngine": { "message": "Lokale Engine" },

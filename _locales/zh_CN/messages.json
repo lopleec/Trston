@@ -25,6 +25,8 @@
   "addSite": { "message": "添加" },
   "removeSite": { "message": "移除 $SITE$", "placeholders": { "site": { "content": "$1" } } },
   "noSitesSelected": { "message": "未添加网站" },
+  "sitePatternPlaceholder": { "message": "example.com 或 example.com/path" },
+  "siteBlocklistPrivacy": { "message": "网站排除列表仅保存在本机。" },
   "streamLimit": { "message": "流式缓存上限" },
   "saveSettings": { "message": "保存设置" },
   "localEngine": { "message": "本地引擎" },

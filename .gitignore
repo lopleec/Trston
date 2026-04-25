@@ -1,0 +1,11 @@
+.DS_Store
+*.log
+*.tmp
+*~
+node_modules/
+coverage/
+dist/
+build/
+.nyc_output/
+*.crx
+*.pem

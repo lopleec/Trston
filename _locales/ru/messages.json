@@ -25,6 +25,8 @@
   "addSite": { "message": "Добавить" },
   "removeSite": { "message": "Удалить $SITE$", "placeholders": { "site": { "content": "$1" } } },
   "noSitesSelected": { "message": "Сайты не добавлены" },
+  "sitePatternPlaceholder": { "message": "example.com или example.com/path" },
+  "siteBlocklistPrivacy": { "message": "Исключения сайтов хранятся только на этом устройстве." },
   "streamLimit": { "message": "Лимит потокового кэша" },
   "saveSettings": { "message": "Сохранить настройки" },
   "localEngine": { "message": "Локальный движок" },

@@ -137,6 +137,13 @@ h2 {
   font-weight: 730;
 }
 
+.field-note {
+  margin: -2px 0 0;
+  color: var(--soft);
+  font-size: 12px;
+  font-weight: 640;
+}
+
 select,
 input,
 textarea {

@@ -25,6 +25,8 @@
   "addSite": { "message": "Adicionar" },
   "removeSite": { "message": "Remover $SITE$", "placeholders": { "site": { "content": "$1" } } },
   "noSitesSelected": { "message": "Nenhum site adicionado" },
+  "sitePatternPlaceholder": { "message": "example.com ou example.com/caminho" },
+  "siteBlocklistPrivacy": { "message": "As exclusoes de sites ficam salvas apenas neste dispositivo." },
   "streamLimit": { "message": "Limite do cache de fluxo" },
   "saveSettings": { "message": "Salvar configuracoes" },
   "localEngine": { "message": "Motor local" },

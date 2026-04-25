@@ -34,7 +34,7 @@ It translates the visible area and nearby content first, then continues as you s
 - 🔁 **Manual toggle** — restore or re-translate at any time via the floating status overlay.
 - ⌨️ **Keyboard shortcut** — toggle between original and translated text instantly.
 - 🚫 **Language blocklist** — never auto-translate from selected source languages.
-- 🌐 **Website blocklist** — never auto-translate selected domains or their subdomains.
+- 🌐 **Website blocklist** — never auto-translate selected domains, subdomains, or path subtrees.
 - 📦 **Language pack manager** — prepare on-device packs with progress tracking.
 - 🌍 **Multilingual UI** — extension interface adapts to your browser language (10 locales).
 - 🎨 **Light & dark mode** — clean black-and-white UI for both themes.
@@ -77,6 +77,14 @@ English, German, French, Japanese, Simplified Chinese, Traditional Chinese, Span
 
 > Chrome may reserve `Cmd+J` / `Ctrl+J` for Downloads. If so, use the extension shortcut or set a custom command at `chrome://extensions/shortcuts`.
 
+### Website Blocklist Patterns
+
+`github.com` blocks the whole domain, including pages such as `github.com/lopleec` and subdomains.
+
+`github.com/lopleec` blocks only that path and child pages, such as `github.com/lopleec/project`, while leaving other GitHub paths available for automatic translation.
+
+Website blocklist entries are stored in `chrome.storage.local` and stay on the current device. General preferences, such as target language and overlay settings, use `chrome.storage.sync` so they can follow the Chrome profile.
+
 ### Install Locally
 
 1. Open `chrome://extensions`.
@@ -107,7 +115,7 @@ Trston requests host permissions for `http://` and `https://` pages so translati
 
 Chrome's Translator API and Language Detector API require **desktop Chrome 138+**. Chrome may download language packs the first time a language pair is used; after that, all translation runs fully on-device.
 
-The Translator API is unavailable in Web Workers, so Trston injects a page-side bridge for translation and keeps the MV3 service worker limited to extension lifecycle actions.
+The Translator API is unavailable in Web Workers, so Trston invokes a small page-side bridge in the page's MAIN world with `chrome.scripting.executeScript`. Page text batches travel through extension messaging instead of `window.postMessage`.
 
 **References**
 - [Chrome Translator API](https://developer.chrome.com/docs/ai/translator-api)
@@ -135,7 +143,7 @@ The Translator API is unavailable in Web Workers, so Trston injects a page-side 
 - 🔁 **手动切换** — 通过悬浮状态栏随时还原或重新翻译。
 - ⌨️ **快捷键** — 即时在原文与译文之间切换。
 - 🚫 **语言黑名单** — 对指定来源语言永不自动翻译。
-- 🌐 **网站黑名单** — 对指定域名及子域名永不自动翻译。
+- 🌐 **网站黑名单** — 对指定域名、子域名或路径子树永不自动翻译。
 - 📦 **语言包管理器** — 带进度提示的本地语言包准备工具。
 - 🌍 **多语言界面** — 扩展 UI 随浏览器语言自动切换（支持 10 种语言）。
 - 🎨 **明暗主题** — 简洁黑白风格，同时支持浅色与深色模式。
@@ -178,6 +186,14 @@ Chrome 根据浏览器 UI 语言自动选择扩展语言，已支持以下语言
 
 > Chrome 可能将 `Cmd+J` / `Ctrl+J` 用于"下载"。如遇冲突，请使用扩展快捷键，或在 `chrome://extensions/shortcuts` 中自定义。
 
+### 网站黑名单匹配规则
+
+`github.com` 会屏蔽整个域名，包括 `github.com/lopleec` 这样的页面和子域名。
+
+`github.com/lopleec` 只会屏蔽这个路径及其子页面，例如 `github.com/lopleec/project`，不会影响 GitHub 的其他路径。
+
+网站黑名单条目存储在 `chrome.storage.local`，只保存在当前设备。目标语言、浮层等普通偏好仍使用 `chrome.storage.sync`，可以跟随 Chrome 账号同步。
+
 ### 本地安装
 
 1. 打开 `chrome://extensions`。
@@ -208,7 +224,7 @@ Trston 申请 `http://` 和 `https://` 页面的主机权限，以便无需点�
 
 Chrome 的 Translator API 和 Language Detector API 需要 **桌面版 Chrome 138 及以上版本**。首次使用某语言对时 Chrome 可能需要下载语言包，此后翻译完全在设备本地运行。
 
-由于 Translator API 在 Web Worker 中不可用，Trston 向页面注入翻译桥接层，MV3 Service Worker 仅负责扩展生命周期管理。
+由于 Translator API 在 Web Worker 中不可用，Trston 会通过 `chrome.scripting.executeScript` 在页面 MAIN world 中调用一个很小的翻译桥接层。页面文本批次走扩展内部消息，不再通过 `window.postMessage` 传递。
 
 **参考资料**
 - [Chrome Translator API](https://developer.chrome.com/docs/ai/translator-api)

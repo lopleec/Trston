@@ -62,9 +62,10 @@
           <div class="field">
             <span data-i18n="neverTranslateSites">Never auto-translate these websites</span>
             <div class="language-add-row">
-              <input id="never-site" type="text" inputmode="url" placeholder="example.com">
+              <input id="never-site" type="text" inputmode="url" placeholder="example.com or example.com/path" data-i18n-placeholder="sitePatternPlaceholder">
               <button class="button" id="add-never-site" type="button" data-i18n="addSite">Add</button>
             </div>
+            <p class="field-note" data-i18n="siteBlocklistPrivacy">Website exclusions are stored only on this device.</p>
             <div class="language-chips" id="never-site-list" aria-live="polite"></div>
           </div>
 

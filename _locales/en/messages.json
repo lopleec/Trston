@@ -25,6 +25,8 @@
   "addSite": { "message": "Add" },
   "removeSite": { "message": "Remove $SITE$", "placeholders": { "site": { "content": "$1" } } },
   "noSitesSelected": { "message": "No websites added" },
+  "sitePatternPlaceholder": { "message": "example.com or example.com/path" },
+  "siteBlocklistPrivacy": { "message": "Website exclusions are stored only on this device." },
   "streamLimit": { "message": "Streaming cache limit" },
   "saveSettings": { "message": "Save settings" },
   "localEngine": { "message": "Local engine" },

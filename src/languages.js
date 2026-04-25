@@ -170,8 +170,8 @@ function normalizeSiteList(value) {
   return [...new Set(value.map(normalizeSitePattern).filter(Boolean))];
 }
 
-function normalizeSitePattern(value) {
-  const text = String(value ?? "").trim().toLowerCase();
+export function normalizeSitePattern(value) {
+  const text = normalizeInputHostSeparators(String(value ?? "").trim().toLowerCase().replace(/\s+/g, ""));
   if (!text) {
     return null;
   }
@@ -179,13 +179,95 @@ function normalizeSitePattern(value) {
   try {
     const withProtocol = /^[a-z][a-z0-9+.-]*:\/\//i.test(text) ? text : `https://${text}`;
     const parsed = new URL(withProtocol);
-    return parsed.hostname.replace(/^\.+|\.+$/g, "");
+    const host = normalizeSiteHost(parsed.hostname);
+    const path = normalizeSitePath(parsed.pathname);
+    return host ? `${host}${path}` : null;
   } catch {
-    return text
-      .replace(/^https?:\/\//, "")
-      .split("/")[0]
-      .replace(/^\.+|\.+$/g, "") || null;
+    const body = text.replace(/^[a-z][a-z0-9+.-]*:\/\//i, "");
+    const boundary = body.search(/[/?#]/);
+    const hostText = boundary === -1 ? body : body.slice(0, boundary);
+    const rest = boundary === -1 ? "" : body.slice(boundary);
+    const host = normalizeSiteHost(hostText);
+    const path = rest.startsWith("/") ? normalizeSitePath(rest.split(/[?#]/)[0]) : "";
+    return host ? `${host}${path}` : null;
   }
+}
+
+export function sitePatternMatchesUrl(pattern, url) {
+  const normalizedPattern = normalizeSitePattern(pattern);
+  if (!normalizedPattern) {
+    return false;
+  }
+
+  let parsedUrl;
+  try {
+    parsedUrl = url instanceof URL ? url : new URL(String(url));
+  } catch {
+    return false;
+  }
+
+  const { host: patternHost, path: patternPath } = splitSitePattern(normalizedPattern);
+  const currentHost = normalizeSiteHost(parsedUrl.hostname);
+  const currentPath = normalizeSitePath(parsedUrl.pathname) || "/";
+  const hostMatches = currentHost === patternHost || currentHost.endsWith(`.${patternHost}`);
+
+  if (!hostMatches) {
+    return false;
+  }
+
+  if (!patternPath) {
+    return true;
+  }
+
+  return currentPath === patternPath || currentPath.startsWith(`${patternPath}/`);
+}
+
+function normalizeInputHostSeparators(text) {
+  const protocolMatch = text.match(/^([a-z][a-z0-9+.-]*:\/\/)(.*)$/i);
+  if (protocolMatch) {
+    return `${protocolMatch[1]}${normalizeInputHostSeparators(protocolMatch[2])}`;
+  }
+
+  const boundary = text.search(/[/?#]/);
+  const hostText = boundary === -1 ? text : text.slice(0, boundary);
+  const rest = boundary === -1 ? "" : text.slice(boundary);
+  return `${hostText.replace(/[，,]/g, ".")}${rest}`;
+}
+
+function normalizeSiteHost(hostname) {
+  return String(hostname ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/[，,]/g, ".")
+    .replace(/\.+/g, ".")
+    .replace(/^\.+|\.+$/g, "");
+}
+
+function normalizeSitePath(pathname) {
+  const path = String(pathname ?? "")
+    .trim()
+    .toLowerCase()
+    .split(/[?#]/)[0]
+    .replace(/\/{2,}/g, "/")
+    .replace(/\/+$/g, "");
+
+  if (!path || path === "/") {
+    return "";
+  }
+
+  return path.startsWith("/") ? path : `/${path}`;
+}
+
+function splitSitePattern(pattern) {
+  const slashIndex = pattern.indexOf("/");
+  if (slashIndex === -1) {
+    return { host: pattern, path: "" };
+  }
+
+  return {
+    host: pattern.slice(0, slashIndex),
+    path: pattern.slice(slashIndex)
+  };
 }
 
 function clampNumber(value, min, max, fallback) {

@@ -3,6 +3,7 @@ import { dirname, join } from "node:path";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { translateWithLocalGlossary } from "../src/fallback_dictionary.js";
+import { normalizeSitePattern, sitePatternMatchesUrl } from "../src/languages.js";
 import { heuristicDetectLanguage } from "../src/translation_engine.js";
 
 const root = dirname(fileURLToPath(new URL("../manifest.json", import.meta.url)));
@@ -14,7 +15,8 @@ assert(manifest.name === "__MSG_extName__", "manifest name must use i18n");
 assert(manifest.default_locale === "en", "manifest default_locale must be en");
 assert(manifest.action && !manifest.action.default_popup, "toolbar click must trigger action.onClicked");
 assert(manifest.options_ui?.page, "options_ui.page is required");
-assert(Array.isArray(manifest.content_scripts) && manifest.content_scripts.length >= 2, "auto content scripts are required");
+assert(Array.isArray(manifest.content_scripts) && manifest.content_scripts.length >= 1, "auto content script is required");
+assert(!JSON.stringify(manifest.content_scripts).includes("src/page_translator.js"), "page translator must be injected on demand");
 assert(manifest.commands?.["toggle-translation"], "toggle translation command is required");
 
 const requiredPaths = [
@@ -48,12 +50,21 @@ for (const file of jsFiles) {
   execFileSync(process.execPath, ["--check", join(root, file)], { stdio: "pipe" });
 }
 
+const pageTranslatorSource = readFileSync(join(root, "src/page_translator.js"), "utf8");
+const contentScriptSource = readFileSync(join(root, "src/content_script.js"), "utf8");
+assert(!pageTranslatorSource.includes("postMessage"), "Page translator must not use window.postMessage");
+assert(!contentScriptSource.includes("postMessage"), "Content script must not post page text through window.postMessage");
+
 assert(heuristicDetectLanguage("Bonjour et merci pour votre aide") === "fr", "French heuristic failed");
 assert(heuristicDetectLanguage("今日はありがとうございます") === "ja", "Japanese heuristic failed");
 assert(
   translateWithLocalGlossary("Hello, settings", "en", "zh").includes("你好"),
   "Fallback glossary failed"
 );
+assert(normalizeSitePattern("github,com/lopleec/") === "github.com/lopleec", "Site pattern normalization failed");
+assert(sitePatternMatchesUrl("github.com", "https://github.com/lopleec") === true, "Domain site block failed");
+assert(sitePatternMatchesUrl("github.com/lopleec", "https://github.com/lopleec/project") === true, "Path site block failed");
+assert(sitePatternMatchesUrl("github.com/lopleec", "https://github.com/other") === false, "Path site block is too broad");
 
 const enMessages = JSON.parse(readFileSync(join(root, "_locales/en/messages.json"), "utf8"));
 assert(enMessages.extName?.message === "Trston", "English locale name must be Trston");

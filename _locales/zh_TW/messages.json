@@ -25,6 +25,8 @@
   "addSite": { "message": "新增" },
   "removeSite": { "message": "移除 $SITE$", "placeholders": { "site": { "content": "$1" } } },
   "noSitesSelected": { "message": "尚未新增網站" },
+  "sitePatternPlaceholder": { "message": "example.com 或 example.com/path" },
+  "siteBlocklistPrivacy": { "message": "網站排除清單只會儲存在本機。" },
   "streamLimit": { "message": "串流快取上限" },
   "saveSettings": { "message": "儲存設定" },
   "localEngine": { "message": "本機引擎" },

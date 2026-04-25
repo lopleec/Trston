@@ -25,6 +25,8 @@
   "addSite": { "message": "추가" },
   "removeSite": { "message": "$SITE$ 제거", "placeholders": { "site": { "content": "$1" } } },
   "noSitesSelected": { "message": "추가된 웹사이트 없음" },
+  "sitePatternPlaceholder": { "message": "example.com 또는 example.com/path" },
+  "siteBlocklistPrivacy": { "message": "웹사이트 제외 목록은 이 기기에만 저장됩니다." },
   "streamLimit": { "message": "스트리밍 캐시 한도" },
   "saveSettings": { "message": "설정 저장" },
   "localEngine": { "message": "로컬 엔진" },

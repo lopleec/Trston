@@ -25,6 +25,8 @@
   "addSite": { "message": "追加" },
   "removeSite": { "message": "$SITE$ を削除", "placeholders": { "site": { "content": "$1" } } },
   "noSitesSelected": { "message": "サイトは追加されていません" },
+  "sitePatternPlaceholder": { "message": "example.com または example.com/path" },
+  "siteBlocklistPrivacy": { "message": "サイトの除外設定はこのデバイスにのみ保存されます。" },
   "streamLimit": { "message": "ストリーミングキャッシュ上限" },
   "saveSettings": { "message": "設定を保存" },
   "localEngine": { "message": "ローカルエンジン" },

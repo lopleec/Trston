@@ -349,16 +349,6 @@
               sourceLanguage,
               pageLanguage: getPageLanguageHint(),
               sample: buildSampleFromNodes(batchNodes)
-            },
-            (download) => {
-              const progress = Number.isFinite(download.progress) ? download.progress : 0;
-              showToast({
-                state: "working",
-                title: t("toastDownloadPack", "Preparing local language pack"),
-                detail: t("downloading", "Downloading $PERCENT$%", [String(Math.round(progress * 100))]),
-                progress,
-                manual
-              });
             }
           );
 
@@ -1103,83 +1093,24 @@
   }
 
   function requestPageLanguage(text, pageLanguage) {
-    const id = createRequestId();
-
-    return new Promise((resolve, reject) => {
-      const timeout = window.setTimeout(() => {
-        cleanup();
-        reject(new Error(t("toastNoResponse", "Chrome local translation did not respond.")));
-      }, 30000);
-
-      function cleanup() {
-        window.clearTimeout(timeout);
-        window.removeEventListener("message", handleMessage);
+    return sendRuntimeMessage({
+      type: "TRSTON_PAGE_DETECT_LANGUAGE",
+      text,
+      pageLanguage
+    }).then((response) => {
+      if (response?.ok) {
+        return normalizeLanguageCode(response.language);
       }
 
-      function handleMessage(event) {
-        if (event.source !== window || !event.data || event.data.id !== id) {
-          return;
-        }
-
-        if (event.data.type === "TRSTON_DETECT_LANGUAGE_RESPONSE") {
-          cleanup();
-          if (event.data.ok) {
-            resolve(normalizeLanguageCode(event.data.language));
-          } else {
-            reject(new Error(event.data.error?.message || t("detectFailed", "Check failed")));
-          }
-        }
-      }
-
-      window.addEventListener("message", handleMessage);
-      window.postMessage({
-        type: "TRSTON_DETECT_LANGUAGE_REQUEST",
-        id,
-        text,
-        pageLanguage
-      }, "*");
+      throw new Error(response?.error?.message || t("detectFailed", "Check failed"));
     });
   }
 
-  function requestPageTranslation(texts, options, onProgress) {
-    const id = createRequestId();
-
-    return new Promise((resolve, reject) => {
-      const timeout = window.setTimeout(() => {
-        cleanup();
-        reject(new Error(t("toastNoResponse", "Chrome local translation did not respond.")));
-      }, 10 * 60 * 1000);
-
-      function cleanup() {
-        window.clearTimeout(timeout);
-        window.removeEventListener("message", handleMessage);
-      }
-
-      function handleMessage(event) {
-        if (event.source !== window || !event.data || event.data.id !== id) {
-          return;
-        }
-
-        if (event.data.type === "TRSTON_TRANSLATE_PROGRESS") {
-          if (typeof onProgress === "function") {
-            onProgress(event.data.progress || {});
-          }
-          return;
-        }
-
-        if (event.data.type === "TRSTON_TRANSLATE_RESPONSE") {
-          cleanup();
-          resolve(event.data);
-        }
-      }
-
-      window.addEventListener("message", handleMessage);
-      window.postMessage({
-        type: "TRSTON_TRANSLATE_REQUEST",
-        id,
-        texts,
-        options
-      }, "*");
+  function requestPageTranslation(texts, options) {
+    return sendRuntimeMessage({
+      type: "TRSTON_PAGE_TRANSLATE",
+      texts,
+      options
     });
   }
 
@@ -1290,7 +1221,7 @@
   }
 
   function normalizeSitePattern(value) {
-    const text = String(value ?? "").trim().toLowerCase();
+    const text = normalizeInputHostSeparators(String(value ?? "").trim().toLowerCase().replace(/\s+/g, ""));
     if (!text) {
       return null;
     }
@@ -1298,18 +1229,91 @@
     try {
       const withProtocol = /^[a-z][a-z0-9+.-]*:\/\//i.test(text) ? text : `https://${text}`;
       const parsed = new URL(withProtocol);
-      return parsed.hostname.replace(/^\.+|\.+$/g, "");
+      const host = normalizeSiteHost(parsed.hostname);
+      const path = normalizeSitePath(parsed.pathname);
+      return host ? `${host}${path}` : null;
     } catch {
-      return text
-        .replace(/^https?:\/\//, "")
-        .split("/")[0]
-        .replace(/^\.+|\.+$/g, "") || null;
+      const body = text.replace(/^[a-z][a-z0-9+.-]*:\/\//i, "");
+      const boundary = body.search(/[/?#]/);
+      const hostText = boundary === -1 ? body : body.slice(0, boundary);
+      const rest = boundary === -1 ? "" : body.slice(boundary);
+      const host = normalizeSiteHost(hostText);
+      const path = rest.startsWith("/") ? normalizeSitePath(rest.split(/[?#]/)[0]) : "";
+      return host ? `${host}${path}` : null;
     }
   }
 
   function isCurrentSiteBlocked(sitePatterns) {
-    const hostname = window.location.hostname.toLowerCase();
-    return sitePatterns.some((site) => hostname === site || hostname.endsWith(`.${site}`));
+    const hostname = normalizeSiteHost(window.location.hostname);
+    const pathname = normalizeSitePath(window.location.pathname) || "/";
+    return sitePatterns.some((site) => sitePatternMatchesCurrentLocation(site, hostname, pathname));
+  }
+
+  function sitePatternMatchesCurrentLocation(pattern, hostname, pathname) {
+    const normalizedPattern = normalizeSitePattern(pattern);
+    if (!normalizedPattern) {
+      return false;
+    }
+
+    const { host: patternHost, path: patternPath } = splitSitePattern(normalizedPattern);
+    const hostMatches = hostname === patternHost || hostname.endsWith(`.${patternHost}`);
+    if (!hostMatches) {
+      return false;
+    }
+
+    if (!patternPath) {
+      return true;
+    }
+
+    return pathname === patternPath || pathname.startsWith(`${patternPath}/`);
+  }
+
+  function normalizeInputHostSeparators(text) {
+    const protocolMatch = text.match(/^([a-z][a-z0-9+.-]*:\/\/)(.*)$/i);
+    if (protocolMatch) {
+      return `${protocolMatch[1]}${normalizeInputHostSeparators(protocolMatch[2])}`;
+    }
+
+    const boundary = text.search(/[/?#]/);
+    const hostText = boundary === -1 ? text : text.slice(0, boundary);
+    const rest = boundary === -1 ? "" : text.slice(boundary);
+    return `${hostText.replace(/[，,]/g, ".")}${rest}`;
+  }
+
+  function normalizeSiteHost(hostname) {
+    return String(hostname ?? "")
+      .trim()
+      .toLowerCase()
+      .replace(/[，,]/g, ".")
+      .replace(/\.+/g, ".")
+      .replace(/^\.+|\.+$/g, "");
+  }
+
+  function normalizeSitePath(pathname) {
+    const path = String(pathname ?? "")
+      .trim()
+      .toLowerCase()
+      .split(/[?#]/)[0]
+      .replace(/\/{2,}/g, "/")
+      .replace(/\/+$/g, "");
+
+    if (!path || path === "/") {
+      return "";
+    }
+
+    return path.startsWith("/") ? path : `/${path}`;
+  }
+
+  function splitSitePattern(pattern) {
+    const slashIndex = pattern.indexOf("/");
+    if (slashIndex === -1) {
+      return { host: pattern, path: "" };
+    }
+
+    return {
+      host: pattern.slice(0, slashIndex),
+      path: pattern.slice(slashIndex)
+    };
   }
 
   function normalizeLanguageCode(value) {
@@ -1361,8 +1365,17 @@
     return /^https?:$/i.test(window.location.protocol);
   }
 
-  function createRequestId() {
-    return `trston-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  function sendRuntimeMessage(message) {
+    return new Promise((resolve, reject) => {
+      chrome.runtime.sendMessage(message, (response) => {
+        if (chrome.runtime.lastError) {
+          reject(new Error(chrome.runtime.lastError.message || t("toastNoResponse", "Chrome local translation did not respond.")));
+          return;
+        }
+
+        resolve(response);
+      });
+    });
   }
 
   function delay(ms) {

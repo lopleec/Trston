@@ -2,7 +2,8 @@ import {
   DEFAULT_SETTINGS,
   SUPPORTED_LANGUAGES,
   coerceSettings,
-  getLanguageLabel
+  getLanguageLabel,
+  normalizeSitePattern
 } from "./src/languages.js";
 import {
   getCapabilityStatus,
@@ -59,6 +60,8 @@ async function init() {
     event.preventDefault();
     await saveSettingsFromForm();
   });
+  form.addEventListener("input", markSettingsDirty);
+  form.addEventListener("change", markSettingsDirty);
 
   targetLanguage.addEventListener("change", () => {
     testTargetLanguage.value = targetLanguage.value;
@@ -155,11 +158,13 @@ function addNeverTranslateSite() {
   selectedNeverTranslateSites = [...selectedNeverTranslateSites, site];
   neverSite.value = "";
   renderNeverTranslateSites();
+  markSettingsDirty();
 }
 
 function removeNeverTranslateSite(site) {
   selectedNeverTranslateSites = selectedNeverTranslateSites.filter((currentSite) => currentSite !== site);
   renderNeverTranslateSites();
+  markSettingsDirty();
 }
 
 function renderNeverTranslateSites() {
@@ -280,11 +285,13 @@ function addNeverTranslateLanguage() {
 
   selectedNeverTranslateLanguages = [...selectedNeverTranslateLanguages, code];
   renderNeverTranslateLanguages();
+  markSettingsDirty();
 }
 
 function removeNeverTranslateLanguage(code) {
   selectedNeverTranslateLanguages = selectedNeverTranslateLanguages.filter((languageCode) => languageCode !== code);
   renderNeverTranslateLanguages();
+  markSettingsDirty();
 }
 
 function renderNeverTranslateLanguages() {
@@ -345,6 +352,14 @@ function localizeStaticText() {
       element.textContent = message;
     }
   }
+
+  for (const element of document.querySelectorAll("[data-i18n-placeholder]")) {
+    const key = element.dataset.i18nPlaceholder;
+    const message = t(key, element.getAttribute("placeholder") || "");
+    if (message) {
+      element.setAttribute("placeholder", message);
+    }
+  }
 }
 
 function t(key, fallback, substitutions) {
@@ -352,22 +367,9 @@ function t(key, fallback, substitutions) {
   return message || fallback;
 }
 
-function normalizeSitePattern(value) {
-  const text = String(value ?? "").trim().toLowerCase();
-  if (!text) {
-    return null;
-  }
-
-  try {
-    const withProtocol = /^[a-z][a-z0-9+.-]*:\/\//i.test(text) ? text : `https://${text}`;
-    const parsed = new URL(withProtocol);
-    return parsed.hostname.replace(/^\.+|\.+$/g, "");
-  } catch {
-    return text
-      .replace(/^https?:\/\//, "")
-      .split("/")[0]
-      .replace(/^\.+|\.+$/g, "") || null;
-  }
+function markSettingsDirty() {
+  saveState.textContent = t("unsaved", "Unsaved");
+  saveState.className = "warn";
 }
 
 function sendMessage(message) {

@@ -27,17 +27,6 @@
         "https://*/*"
       ],
       "js": [
-        "src/page_translator.js"
-      ],
-      "run_at": "document_idle",
-      "world": "MAIN"
-    },
-    {
-      "matches": [
-        "http://*/*",
-        "https://*/*"
-      ],
-      "js": [
         "src/content_script.js"
       ],
       "run_at": "document_idle"

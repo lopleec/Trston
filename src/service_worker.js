@@ -1,9 +1,15 @@
 import {
   DEFAULT_SETTINGS,
-  coerceSettings
+  coerceSettings,
+  normalizeLanguageCode
 } from "./languages.js";
+import {
+  detectLanguage as detectWithExtensionFallback,
+  translateTexts as translateWithExtensionFallback
+} from "./translation_engine.js";
 
 const MENU_OPEN_OPTIONS = "trston-open-options";
+const LOCAL_ONLY_SETTING_KEYS = new Set(["neverTranslateSites"]);
 const BADGE_COLORS = {
   working: "#111111",
   done: "#2f2f2f",
@@ -77,12 +83,6 @@ async function toggleTranslationOnTab(tab) {
 async function ensureTabScripts(tabId) {
   await chrome.scripting.executeScript({
     target: { tabId },
-    files: ["src/page_translator.js"],
-    world: "MAIN"
-  });
-
-  await chrome.scripting.executeScript({
-    target: { tabId },
     files: ["src/content_script.js"]
   });
 }
@@ -120,6 +120,20 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  if (message.type === "TRSTON_PAGE_DETECT_LANGUAGE") {
+    detectPageLanguage(sender, message)
+      .then((language) => sendResponse({ ok: true, language }))
+      .catch((error) => sendResponse({ ok: false, error: serializeError(error) }));
+    return true;
+  }
+
+  if (message.type === "TRSTON_PAGE_TRANSLATE") {
+    translatePageTexts(sender, message)
+      .then((result) => sendResponse({ ok: true, result }))
+      .catch((error) => sendResponse({ ok: false, error: serializeError(error) }));
+    return true;
+  }
+
   if (message.type === "TRSTON_OPEN_OPTIONS") {
     chrome.runtime.openOptionsPage();
     sendResponse({ ok: true });
@@ -136,13 +150,26 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 async function ensureDefaultSettings() {
-  const stored = await chrome.storage.sync.get(DEFAULT_SETTINGS);
-  await chrome.storage.sync.set(coerceSettings(stored));
+  await persistSettings(await getSettings());
 }
 
 async function getSettings() {
-  const stored = await chrome.storage.sync.get(DEFAULT_SETTINGS);
-  return coerceSettings(stored);
+  const synced = await chrome.storage.sync.get(DEFAULT_SETTINGS);
+  const local = await chrome.storage.local.get({ neverTranslateSites: null });
+  const migratedSites = Array.isArray(local.neverTranslateSites)
+    ? local.neverTranslateSites
+    : synced.neverTranslateSites;
+  const settings = coerceSettings({
+    ...synced,
+    neverTranslateSites: migratedSites
+  });
+
+  if (Array.isArray(synced.neverTranslateSites) && synced.neverTranslateSites.length > 0) {
+    await chrome.storage.local.set({ neverTranslateSites: settings.neverTranslateSites });
+    await chrome.storage.sync.remove("neverTranslateSites");
+  }
+
+  return settings;
 }
 
 async function saveSettings(partialSettings) {
@@ -151,8 +178,163 @@ async function saveSettings(partialSettings) {
     ...partialSettings
   });
 
-  await chrome.storage.sync.set(settings);
+  await persistSettings(settings);
   return settings;
+}
+
+async function persistSettings(settings) {
+  const syncSettings = {};
+  const localSettings = {};
+
+  for (const [key, value] of Object.entries(settings)) {
+    if (LOCAL_ONLY_SETTING_KEYS.has(key)) {
+      localSettings[key] = value;
+    } else {
+      syncSettings[key] = value;
+    }
+  }
+
+  await Promise.all([
+    chrome.storage.sync.set(syncSettings),
+    chrome.storage.local.set(localSettings),
+    chrome.storage.sync.remove([...LOCAL_ONLY_SETTING_KEYS])
+  ]);
+}
+
+async function detectPageLanguage(sender, message) {
+  const text = message.text || "";
+  const pageLanguage = message.pageLanguage || "";
+
+  try {
+    const language = normalizeLanguageCode(
+      await runPageTranslator(sender, "detectLanguage", { text })
+    );
+    if (language) {
+      return language;
+    }
+  } catch {
+    // Extension-side detection keeps the feature working if MAIN-world APIs fail.
+  }
+
+  return detectWithExtensionFallback(text, pageLanguage);
+}
+
+async function translatePageTexts(sender, message) {
+  const texts = Array.isArray(message.texts) ? message.texts : [];
+  const options = message.options || {};
+  const targetLanguage = normalizeLanguageCode(options.targetLanguage) || DEFAULT_SETTINGS.targetLanguage;
+  const sourceLanguage =
+    normalizeLanguageCode(options.sourceLanguage) ||
+    (await detectPageLanguage(sender, {
+      text: options.sample || texts.join("\n"),
+      pageLanguage: options.pageLanguage
+    }));
+
+  if (!sourceLanguage) {
+    return translateWithExtensionFallback(texts, {
+      ...options,
+      sourceLanguage: "en",
+      targetLanguage
+    });
+  }
+
+  if (sourceLanguage === targetLanguage) {
+    return {
+      sourceLanguage,
+      targetLanguage,
+      engine: "none",
+      translations: texts,
+      warnings: []
+    };
+  }
+
+  try {
+    const translations = await runPageTranslator(sender, "translateTexts", {
+      texts,
+      sourceLanguage,
+      targetLanguage
+    });
+
+    return {
+      sourceLanguage,
+      targetLanguage,
+      engine: "chrome-translator",
+      translations,
+      warnings: []
+    };
+  } catch (error) {
+    const result = await translateWithExtensionFallback(texts, {
+      ...options,
+      sourceLanguage,
+      targetLanguage
+    });
+    return {
+      ...result,
+      warnings: [
+        ...(result.warnings || []),
+        serializeError(error).message
+      ].filter(Boolean)
+    };
+  }
+}
+
+async function runPageTranslator(sender, method, payload) {
+  if (!sender.tab?.id) {
+    throw new Error("No active tab is available for page translation.");
+  }
+
+  const target = { tabId: sender.tab.id };
+  if (Number.isInteger(sender.frameId) && sender.frameId >= 0) {
+    target.frameIds = [sender.frameId];
+  }
+
+  await chrome.scripting.executeScript({
+    target,
+    files: ["src/page_translator.js"],
+    world: "MAIN"
+  });
+
+  const [execution] = await chrome.scripting.executeScript({
+    target,
+    world: "MAIN",
+    func: callTrstonPageTranslator,
+    args: [method, payload]
+  });
+  const response = execution?.result;
+
+  if (!response?.ok) {
+    throw createError(response?.error);
+  }
+
+  return response.value;
+}
+
+async function callTrstonPageTranslator(method, payload) {
+  try {
+    const bridge = globalThis.__trstonPageTranslator;
+    if (bridge?.version !== "trston-page-translator-v2" || typeof bridge[method] !== "function") {
+      throw new Error("Trston page translator is not available.");
+    }
+
+    return {
+      ok: true,
+      value: await bridge[method](payload)
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      error: {
+        name: error?.name || "Error",
+        message: error?.message || String(error || "Unknown translation error")
+      }
+    };
+  }
+}
+
+function createError(error) {
+  const created = new Error(error?.message || "Unknown translation error");
+  created.name = error?.name || "Error";
+  return created;
 }
 
 function setupContextMenus() {
