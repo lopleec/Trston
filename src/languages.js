@@ -44,6 +44,7 @@ export const SUPPORTED_LANGUAGE_CODES = SUPPORTED_LANGUAGES.map((language) => la
 
 export const DEFAULT_SETTINGS = {
   targetLanguage: "zh",
+  translationEnabled: true,
   showOverlay: true,
   autoTranslate: true,
   streamTranslation: true,
@@ -142,6 +143,7 @@ export function coerceSettings(settings = {}) {
     ...DEFAULT_SETTINGS,
     ...settings,
     targetLanguage,
+    translationEnabled: settings.translationEnabled !== false,
     showOverlay: settings.showOverlay !== false,
     autoTranslate: settings.autoTranslate !== false,
     streamTranslation: settings.streamTranslation !== false,

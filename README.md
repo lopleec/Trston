@@ -30,6 +30,7 @@ It translates the visible area and nearby content first, then continues as you s
 ### Features
 
 - 🔄 **Automatic translation** for `http`/`https` pages that are not in your preferred language.
+- ⏸️ **Global pause switch** — disable all Trston translation from settings without removing the extension.
 - 🖥️ **Viewport streaming** — translate what's visible first, then continue as you scroll.
 - 🔁 **Manual toggle** — restore or re-translate at any time via the floating status overlay.
 - ⌨️ **Keyboard shortcut** — toggle between original and translated text instantly.
@@ -139,6 +140,7 @@ The Translator API is unavailable in Web Workers, so Trston invokes a small page
 ### 功能特性
 
 - 🔄 **自动翻译** — 对非目标语言的 `http`/`https` 页面自动触发翻译。
+- ⏸️ **全局暂停开关** — 可在设置中关闭 Trston 的所有翻译能力，无需卸载扩展。
 - 🖥️ **视口流式翻译** — 优先翻译可见区域，滚动时持续推进。
 - 🔁 **手动切换** — 通过悬浮状态栏随时还原或重新翻译。
 - ⌨️ **快捷键** — 即时在原文与译文之间切换。

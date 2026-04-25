@@ -13,6 +13,7 @@ import {
 
 const form = document.getElementById("settings-form");
 const targetLanguage = document.getElementById("target-language");
+const translationEnabled = document.getElementById("translation-enabled");
 const showOverlay = document.getElementById("show-overlay");
 const autoTranslate = document.getElementById("auto-translate");
 const streamTranslation = document.getElementById("stream-translation");
@@ -106,6 +107,7 @@ function renderSettings(settings) {
   targetLanguage.value = settings.targetLanguage;
   testTargetLanguage.value = settings.targetLanguage;
   sourceLanguage.value = settings.targetLanguage === "en" ? "zh" : "en";
+  translationEnabled.checked = settings.translationEnabled;
   showOverlay.checked = settings.showOverlay;
   autoTranslate.checked = settings.autoTranslate;
   streamTranslation.checked = settings.streamTranslation;
@@ -125,6 +127,7 @@ async function saveSettingsFromForm() {
 
   const settings = {
     targetLanguage: targetLanguage.value,
+    translationEnabled: translationEnabled.checked,
     showOverlay: showOverlay.checked,
     autoTranslate: autoTranslate.checked,
     streamTranslation: streamTranslation.checked,

@@ -84,6 +84,7 @@
   ]);
   const DEFAULT_SETTINGS = {
     targetLanguage: "zh",
+    translationEnabled: true,
     showOverlay: true,
     autoTranslate: true,
     streamTranslation: true,
@@ -176,7 +177,7 @@
     targetLanguage = settings.targetLanguage;
     overlayEnabled = settings.showOverlay !== false;
 
-    if (!settings.autoTranslate || !document.body || isCurrentSiteBlocked(settings.neverTranslateSites)) {
+    if (!settings.translationEnabled || !settings.autoTranslate || !document.body || isCurrentSiteBlocked(settings.neverTranslateSites)) {
       return;
     }
 
@@ -199,6 +200,16 @@
     targetLanguage = settings.targetLanguage;
     overlayEnabled = true;
     manualOverlayOpen = true;
+
+    if (!settings.translationEnabled) {
+      if (translationStarted && translationMode === "translated") {
+        showCurrentStatus({ manual: true });
+        return { shown: true, disabled: true };
+      }
+
+      showTranslationDisabledToast({ manual: true, persistent: true });
+      return { skipped: true, reason: "translation-disabled" };
+    }
 
     const detectedLanguage = await ensurePageLanguage();
     if (detectedLanguage === targetLanguage && translatedCount === 0) {
@@ -250,6 +261,11 @@
       return { mode: "original" };
     }
 
+    if (!settings.translationEnabled) {
+      showTranslationDisabledToast({ force: true, autoCloseMs: 5000 });
+      return { skipped: true, reason: "translation-disabled" };
+    }
+
     if (translationMode === "original") {
       toggleTranslationMode({ temporary: true });
       return { mode: "translated" };
@@ -266,6 +282,11 @@
 
     targetLanguage = settings.targetLanguage;
     overlayEnabled = settings.showOverlay !== false || manual;
+    if (!settings.translationEnabled) {
+      showTranslationDisabledToast({ manual, force: manual, autoCloseMs: 5000 });
+      return { skipped: true, reason: "translation-disabled" };
+    }
+
     translationMode = "translated";
     translationStarted = true;
     lastError = null;
@@ -433,6 +454,20 @@
       manual,
       autoCloseMs
     });
+  }
+
+  function showTranslationDisabledToast({ manual = false, persistent = false, force = false, autoCloseMs = 5000 } = {}) {
+    showToast({
+      state: "done",
+      title: t("toastDisabled", "Trston is paused"),
+      detail: t("toastDisabledDetail", "Enable translation in settings to translate pages."),
+      progress: 0,
+      manual,
+      persistent,
+      force,
+      autoCloseMs
+    });
+    sendStatus("idle", "");
   }
 
   function showCurrentStatus({ manual = false } = {}) {
@@ -621,6 +656,11 @@
   function toggleTranslationMode({ temporary = false } = {}) {
     if (translationMode === "translated") {
       restoreOriginalText({ temporary });
+      return;
+    }
+
+    if (!settings?.translationEnabled) {
+      showTranslationDisabledToast({ manual: !temporary, force: temporary, persistent: !temporary, autoCloseMs: 5000 });
       return;
     }
 
@@ -1187,6 +1227,7 @@
       ...DEFAULT_SETTINGS,
       ...value,
       targetLanguage: normalizeLanguageCode(value.targetLanguage) || DEFAULT_SETTINGS.targetLanguage,
+      translationEnabled: value.translationEnabled !== false,
       showOverlay: value.showOverlay !== false,
       autoTranslate: value.autoTranslate !== false,
       streamTranslation: value.streamTranslation !== false,
